@@ -17,7 +17,9 @@ PORT create_port()
 PORT create_new_port(PROCESS owner)
 {
     PORT            p;
+    volatile int    flag;
 
+    DISABLE_INTR(flag);
     assert(owner->magic == MAGIC_PCB);
     if (next_free_port == NULL)
         panic("create_new_port(): PORT full");
@@ -34,6 +36,7 @@ PORT create_new_port(PROCESS owner)
     else
         p->next = owner->first_port;
     owner->first_port = p;
+    ENABLE_INTR(flag);
 
     return p;
 }
@@ -41,6 +44,9 @@ PORT create_new_port(PROCESS owner)
 
 void add_to_send_blocked_list(PORT port, PROCESS proc)
 {
+    volatile int    flag;
+
+    DISABLE_INTR(flag);
     assert(port->magic == MAGIC_PORT);
     assert(proc->magic == MAGIC_PCB);
     if (port->blocked_list_head == NULL)
@@ -49,6 +55,7 @@ void add_to_send_blocked_list(PORT port, PROCESS proc)
         port->blocked_list_tail->next_blocked = proc;
     port->blocked_list_tail = proc;
     proc->next_blocked = NULL;
+    ENABLE_INTR(flag);
 }
 
 
@@ -70,7 +77,9 @@ void close_port(PORT port)
 void send(PORT dest_port, void *data)
 {
     PROCESS         dest;
+    volatile int    flag;
 
+    DISABLE_INTR(flag);
     assert(dest_port->magic == MAGIC_PORT);
     dest = dest_port->owner;
     assert(dest->magic == MAGIC_PCB);
@@ -96,13 +105,16 @@ void send(PORT dest_port, void *data)
     active_proc->param_data = data;
     remove_ready_queue(active_proc);
     resign();
+    ENABLE_INTR(flag);
 }
 
 
 void message(PORT dest_port, void *data)
 {
     PROCESS         dest;
+    volatile int    flag;
 
+    DISABLE_INTR(flag);
     assert(dest_port->magic == MAGIC_PORT);
     dest = dest_port->owner;
     assert(dest->magic == MAGIC_PCB);
@@ -122,6 +134,7 @@ void message(PORT dest_port, void *data)
         active_proc->param_data = data;
     }
     resign();
+    ENABLE_INTR(flag);
 }
 
 
@@ -131,7 +144,9 @@ void           *receive(PROCESS * sender)
     PROCESS         deliver_proc;
     PORT            port;
     void           *data;
+    volatile int    flag;
 
+    DISABLE_INTR(flag);
     data = NULL;
     port = active_proc->first_port;
     if (port == NULL)
@@ -154,9 +169,11 @@ void           *receive(PROCESS * sender)
 
         if (deliver_proc->state == STATE_MESSAGE_BLOCKED) {
             add_ready_queue(deliver_proc);
+            ENABLE_INTR(flag);
             return data;
         } else if (deliver_proc->state == STATE_SEND_BLOCKED) {
             deliver_proc->state = STATE_REPLY_BLOCKED;
+            ENABLE_INTR(flag);
             return data;
         }
     }
@@ -168,16 +185,21 @@ void           *receive(PROCESS * sender)
     resign();
     *sender = active_proc->param_proc;
     data = active_proc->param_data;
+    ENABLE_INTR(flag);
     return data;
 }
 
 
 void reply(PROCESS sender)
 {
+    volatile int    flag;
+
+    DISABLE_INTR(flag);
     if (sender->state != STATE_REPLY_BLOCKED)
         panic("reply(): Not reply blocked");
     add_ready_queue(sender);
     resign();
+    ENABLE_INTR(flag);
 }
 
 

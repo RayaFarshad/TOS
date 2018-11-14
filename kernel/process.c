@@ -12,12 +12,16 @@ PORT create_process(void (*ptr_to_new_proc) (PROCESS, PARAM),
     MEM_ADDR        esp;
     PROCESS         new_proc;
     PORT            new_port;
+    volatile int    flag;
+
+    DISABLE_INTR(flag);
     if (prio >= MAX_READY_QUEUES)
         panic("create(): Bad priority");
     if (next_free_pcb == NULL)
         panic("create(): PCB full");
     new_proc = next_free_pcb;
     next_free_pcb = new_proc->next;
+    ENABLE_INTR(flag);
     new_proc->used = TRUE;
     new_proc->magic = MAGIC_PCB;
     new_proc->state = STATE_READY;
@@ -37,6 +41,12 @@ PORT create_process(void (*ptr_to_new_proc) (PROCESS, PARAM),
     PUSH(param);                /* First data */
     PUSH(new_proc);             /* Self */
     PUSH(0);                    /* Dummy return address */
+    if (interrupts_initialized) {
+        PUSH(512);              /* Flags with enabled Interrupts */
+    } else {
+        PUSH(0);                /* Flags with disabled Interrupts */
+    }
+    PUSH(CODE_SELECTOR);        /* Kernel code selector */
     PUSH(ptr_to_new_proc);      /* Entry point of new process */
     PUSH(0);                    /* EAX */
     PUSH(0);                    /* ECX */
