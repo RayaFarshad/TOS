@@ -203,6 +203,15 @@ void isr_timer()
 
 void isr_timer_impl()
 {
+    /* 
+     * If a process is waiting for this interrupt, then put it back
+     * to the ready queue.
+     */
+    PROCESS         p = interrupt_table[TIMER_IRQ];
+    if (p && p->state == STATE_INTR_BLOCKED) {
+        /* Add event handler to ready queue */
+        add_ready_queue(p);
+    }
 
     /* Dispatch new process */
     active_proc = dispatcher();
@@ -282,6 +291,17 @@ void isr_keyb_impl()
 
 void wait_for_interrupt(int intr_no)
 {
+    volatile int    flag;
+
+    DISABLE_INTR(flag);
+    if (interrupt_table[intr_no] != NULL)
+        panic("wait_for_interrupt(): ISR busy");
+    interrupt_table[intr_no] = active_proc;
+    remove_ready_queue(active_proc);
+    active_proc->state = STATE_INTR_BLOCKED;
+    resign();
+    interrupt_table[intr_no] = NULL;
+    ENABLE_INTR(flag);
 }
 
 
@@ -349,6 +369,8 @@ void init_interrupts()
 
     re_program_interrupt_controller();
 
+    for (i = 0; i < MAX_INTERRUPTS; i++)
+        interrupt_table[i] = NULL;
     interrupts_initialized = TRUE;
     asm("sti");
 }

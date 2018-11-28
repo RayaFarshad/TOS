@@ -177,8 +177,7 @@ void create_new_ghost()
     choose_random_direction(&dx, &dy);
 
     while (1) {
-        int             delay;
-        for (delay = 0; delay < 1000000; delay++);
+        sleep(10);
         while (move_ghost(&ghost, dx, dy) == FALSE)
             choose_random_direction(&dx, &dy);
     }
