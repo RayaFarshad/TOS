@@ -224,10 +224,55 @@ void isr_timer_impl()
  */
 void isr_com1()
 {
+    /* 
+     *  PUSHL   %EAX            ; Save process' context
+     *  PUSHL   %ECX
+     *  PUSHL   %EDX
+     *  PUSHL   %EBX
+     *  PUSHL   %EBP
+     *  PUSHL   %ESI
+     *  PUSHL   %EDI
+     */
+    asm("pushl %eax;pushl %ecx;pushl %edx");
+    asm("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
+    /* Save the context pointer ESP to the PCB */
+    asm("movl %%esp,%0": "=m"(active_proc->esp):);
+    /* Call the actual implementation of the ISR */
+    asm("call isr_com1_impl");
+    /* Restore context pointer ESP */
+    asm("movl %0,%%esp": :"m"(active_proc->esp));
+    /* 
+     *  MOVB  $0x20,%AL ; Reset interrupt controller
+     *  OUTB  %AL,$0x20
+     *  POPL  %EDI      ; Restore previously saved context
+     *  POPL  %ESI
+     *  POPL  %EBP
+     *  POPL  %EBX
+     *  POPL  %EDX
+     *  POPL  %ECX
+     *  POPL  %EAX
+     *  IRET            ; Return to new process
+     */
+    asm("movb $0x20,%al;outb %al,$0x20");
+    asm("popl %edi;popl %esi;popl %ebp;popl %ebx");
+    asm("popl %edx;popl %ecx;popl %eax");
+    asm("iret");
 }
 
 void isr_com1_impl()
 {
+    PROCESS         p;
+    if ((p = interrupt_table[COM1_IRQ]) == NULL)
+        panic("service_intr_0x64: Spurious interrupt");
+
+    if (p->state != STATE_INTR_BLOCKED)
+        panic("service_intr_0x64: No process waiting");
+
+    /* Add event handler to ready queue */
+    add_ready_queue(p);
+
+    /* Dispatch new process */
+    active_proc = dispatcher();
 }
 
 
@@ -366,6 +411,8 @@ void init_interrupts()
     init_idt_entry(15, exception15);
     init_idt_entry(16, exception16);
     init_idt_entry(TIMER_IRQ, isr_timer);
+    init_idt_entry(COM1_IRQ, isr_com1);
+    init_idt_entry(KEYB_IRQ, isr_keyb);
 
     re_program_interrupt_controller();
 
