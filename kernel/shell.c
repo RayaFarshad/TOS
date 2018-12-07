@@ -9,9 +9,23 @@ typedef struct cmd_hist_node {
   struct cmd_hist_node *next;
 } _cmd_hist_node;
 
+int str_to_int(char * num)
+{
+  int new_int = 0;
+  int i = 0;
+
+  while(num[i] != '\0')
+  {
+    new_int = new_int * 10 + ((int)num[i] - 48);
+    i++;
+  }
+
+  return new_int;
+}
+
 void set_command(int window_id, char * history_cmd, char * new_cmd)
 {
-  wm_print(window_id, "setting");
+  //wm_print(window_id, "setting");
   int i = 0;
 
   while(new_cmd[i] != '\0')
@@ -19,7 +33,7 @@ void set_command(int window_id, char * history_cmd, char * new_cmd)
     history_cmd[i] = new_cmd[i];
     i++;
   }
-  wm_print(window_id, "done setting");
+  //wm_print(window_id, "done setting");
 }
 
 void print_processes(int window_id)
@@ -42,6 +56,25 @@ void print_command_history(int window_id, _cmd_hist_node* head)
   {
     wm_print(window_id, "%d - %s \n",temp->index, temp->cmd);
     temp = temp-> next;
+  }
+}
+
+void exec_history_cmd(int window_id, _cmd_hist_node * node, int his_index)
+{
+  int i = 0;
+
+  while(node->next != NULL)
+  {
+    if(i == his_index)
+    {
+      wm_print(window_id, "%s", node->cmd);
+      int match_found = find_command(node->cmd);
+      run_command(window_id, match_found, node);
+      return;
+    }
+
+    i++;
+    node = node->next;
   }
 }
 
@@ -99,6 +132,36 @@ int find_command(char* command)
   return -1;
 }
 
+void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * his_node, int hist_len)
+{
+  int i = 1;
+  char * num = (char *) malloc(cmd_len * sizeof(char));
+
+  while(cmd[i] != '\0')
+  {
+    if(cmd[i] < 48 || cmd[i] > 57)
+    {
+      wm_print(window_id, "Invalid command");
+      return;
+    }
+    num[i - 1] = cmd[i];
+    i++;
+  }
+
+  int hist_index = str_to_int(num);
+
+  if(hist_index > hist_len)
+  {
+      wm_print(window_id, "Invalid index, total %d commands in history", hist_len);
+      return;
+  }
+  else
+  {
+    exec_history_cmd(window_id, his_node, hist_index);
+    return;
+  }
+}
+
 void user_process(PROCESS self, PARAM param)
 {
   char command[50];
@@ -141,27 +204,30 @@ void user_process(PROCESS self, PARAM param)
     new_command->index = history_index;
     history_index++;
 
-    wm_print(window_id, "created node");
+    //wm_print(window_id, "created node");
 
     if(first == NULL)
     {
-      wm_print(window_id, "first node null");
+      //wm_print(window_id, "first node null");
       first = new_command;
       tail = new_command;
     }
     else
     {
-      wm_print(window_id, "first node not null");
+      //wm_print(window_id, "first node not null");
       tail->next = new_command;
       tail = tail->next;
     }
 
-    int match_found = find_command(command);
-
-    wm_print(window_id, "\n");
-    //wm_print(window_id, "%d", match_found);
-    run_command(window_id, match_found, first);
-
+    if(command[0] == '!')
+    {
+      run_exclamation(window_id, command, curr_index, first, history_index);
+    }
+    else
+    {
+      int match_found = find_command(command);
+      run_command(window_id, match_found, first);
+    }
     wm_print(window_id, "\n>");
 
     for(int i = 0; i < 50; i++)
