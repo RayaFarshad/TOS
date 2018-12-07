@@ -33,6 +33,8 @@ void set_command(int window_id, char * history_cmd, char * new_cmd)
     history_cmd[i] = new_cmd[i];
     i++;
   }
+
+  history_cmd[i+1] = '\0';
   //wm_print(window_id, "done setting");
 }
 
@@ -54,7 +56,7 @@ void print_command_history(int window_id, _cmd_hist_node* head)
 
   while(temp->next != NULL)
   {
-    wm_print(window_id, "%d - %s \n",temp->index, temp->cmd);
+    wm_print(window_id, "%d - %s\n",temp->index, temp->cmd);
     temp = temp-> next;
   }
 }
@@ -196,9 +198,9 @@ void user_process(PROCESS self, PARAM param)
     }
 
     wm_print(window_id, "\n");
-
+    
     _cmd_hist_node* new_command = (_cmd_hist_node*)  malloc(sizeof(_cmd_hist_node));
-    new_command->cmd = (char *) malloc(curr_index * sizeof(char));
+    new_command->cmd = (char *) malloc((curr_index + 1) * sizeof(char));
     set_command(window_id, new_command->cmd, command);
     new_command->next = NULL;
     new_command->index = history_index;
