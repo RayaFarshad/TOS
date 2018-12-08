@@ -54,7 +54,7 @@ void print_command_history(int window_id, _cmd_hist_node* head)
 {
   _cmd_hist_node *temp = head;
 
-  while(temp->next != NULL)
+  while(temp != NULL)
   {
     wm_print(window_id, "%d - %s\n",temp->index, temp->cmd);
     temp = temp-> next;
@@ -69,7 +69,7 @@ void exec_history_cmd(int window_id, _cmd_hist_node * node, int his_index)
   {
     if(i == his_index)
     {
-      wm_print(window_id, "%s", node->cmd);
+      wm_print(window_id, "%s\n", node->cmd);
       int match_found = find_command(node->cmd);
       run_command(window_id, match_found, node);
       return;
@@ -164,13 +164,19 @@ void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * hi
   }
 }
 
-void user_process(PROCESS self, PARAM param)
+void run_echo(int window_id, char* command)
+{
+
+}
+
+void shell_process(PROCESS self, PARAM param)
 {
   char command[50];
   _cmd_hist_node * first = NULL;
   _cmd_hist_node * tail = NULL;
   int curr_index = 0;
   int history_index = 0;
+  int space_count = 0;
   int window_id = wm_create(10, 3, 50, 17);
   wm_print(window_id, ">");
 
@@ -178,13 +184,30 @@ void user_process(PROCESS self, PARAM param)
   {
     char ch = keyb_get_keystroke(window_id, TRUE);
 
+    if(ch == ' ')
+    {
+      wm_print(window_id, "%c", ch);
+      space_count++;
+      continue;
+    }
+
     while(ch != 13)
     {
-      if(ch == 8 && curr_index > 0)
+      if(ch == 8)
       {
-        curr_index--;
-        command[curr_index] = '\0';
-        wm_print(window_id, "%c", ch);
+        //wm_print(window_id, "%d ", curr_index);
+        //wm_print(window_id, "%d\n", space_count);
+        if(curr_index > 0)
+        {
+          curr_index--;
+          command[curr_index] = '\0';
+          wm_print(window_id, "%c", ch);
+        }
+        else if(curr_index == 0 && space_count > 0)
+        {
+          space_count--;
+          wm_print(window_id, "%c", ch);
+        }
       }
 
       if(ch != 8)
@@ -198,27 +221,15 @@ void user_process(PROCESS self, PARAM param)
     }
 
     wm_print(window_id, "\n");
-    
-    _cmd_hist_node* new_command = (_cmd_hist_node*)  malloc(sizeof(_cmd_hist_node));
-    new_command->cmd = (char *) malloc((curr_index + 1) * sizeof(char));
-    set_command(window_id, new_command->cmd, command);
-    new_command->next = NULL;
-    new_command->index = history_index;
-    history_index++;
+    wm_print(window_id, "%s\n", command);
 
-    //wm_print(window_id, "created node");
+    for(int i = curr_index - 1; i>0; i--)
+    {
+      if(command[i] != ' ')
+        break;
 
-    if(first == NULL)
-    {
-      //wm_print(window_id, "first node null");
-      first = new_command;
-      tail = new_command;
-    }
-    else
-    {
-      //wm_print(window_id, "first node not null");
-      tail->next = new_command;
-      tail = tail->next;
+      command[i] = '\0';
+      curr_index--;
     }
 
     if(command[0] == '!')
@@ -227,8 +238,37 @@ void user_process(PROCESS self, PARAM param)
     }
     else
     {
-      int match_found = find_command(command);
-      run_command(window_id, match_found, first);
+      _cmd_hist_node* new_command = (_cmd_hist_node*)  malloc(sizeof(_cmd_hist_node));
+      new_command->cmd = (char *) malloc((curr_index + 1) * sizeof(char));
+      set_command(window_id, new_command->cmd, command);
+      new_command->next = NULL;
+      new_command->index = history_index;
+      history_index++;
+
+      //wm_print(window_id, "created node");
+
+      if(first == NULL)
+      {
+        //wm_print(window_id, "first node null");
+        first = new_command;
+        tail = new_command;
+      }
+      else
+      {
+        //wm_print(window_id, "first node not null");
+        tail->next = new_command;
+        tail = tail->next;
+      }
+
+      //if(match_strings(command, 'echo')
+      //{
+        //run_echo(window_id,command);
+      //}
+      //else
+      //{
+        int match_found = find_command(command);
+        run_command(window_id, match_found, first);
+      //}
     }
     wm_print(window_id, "\n>");
 
@@ -245,5 +285,5 @@ void user_process(PROCESS self, PARAM param)
 void start_shell()
 {
   //wm_print('add process');
-  create_process(user_process, 6, 2, "User Process");
+  create_process(shell_process, 4, 0, "Shell Process");
 }
