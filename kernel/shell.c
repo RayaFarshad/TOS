@@ -1,3 +1,7 @@
+/*
+Authored by Ali Alavi
+Student ID # 917932397
+*/
 #include <kernel.h>
 
 const char *commands[] = {"cls", "ps", "pong", "shell", "history"};
@@ -88,8 +92,75 @@ void exec_history_cmd(int window_id, _cmd_hist_node * node, int hist_index)
   }
 }
 
-void run_command(int window_id, int command_index, _cmd_hist_node* head)
+void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node* head, int hist_len)
 {
+  int start = 0;
+  int i = 0;
+  int j = 0;
+  char * sub_cmd;
+  int sub_cmd_length;
+
+  while(command[i] != '\0')
+  {
+    if(command[i] == ';')
+    {
+      sub_cmd_length = i - start;
+
+      sub_cmd = (char *) malloc((sub_cmd_length + 1) * sizeof(char));
+
+      while(start < i)
+      {
+        sub_cmd[j] = command[start];
+        start++;
+        j++;
+      }
+
+      sub_cmd[j] = '\0';
+
+      run_command(window_id, sub_cmd, sub_cmd_length, head, hist_len);
+
+      j = 0 ;
+      start = i + 1;
+    }
+
+    i++;
+  }
+
+  if(start < i)
+  {
+    sub_cmd = (char *) malloc((sub_cmd_length + 1) * sizeof(char));
+
+    while(start < i)
+    {
+      sub_cmd[j] = command[start];
+      start++;
+      j++;
+    }
+
+    sub_cmd[j] = '\0';
+
+    run_command(window_id, sub_cmd, sub_cmd_length, head, hist_len);
+  }
+}
+
+void run_command(int window_id, char * command, int cmd_len, _cmd_hist_node* head, int hist_len)
+{
+  wm_print(window_id, "%s\n", command);
+  int command_index;
+
+  if(command[0] == '!')
+  {
+    command_index = 5;
+  }
+  else if(k_memcmp(command, "echo", 4) == 0)
+  {
+    command_index = 6;
+  }
+  else
+  {
+    command_index = find_command(command);
+  }
+
   switch(command_index) {
     case 0:
       wm_clear(window_id);
@@ -106,10 +177,14 @@ void run_command(int window_id, int command_index, _cmd_hist_node* head)
     case 4:
       print_command_history(window_id, head);
       break;
+    case 5:
+      run_exclamation(window_id, command, command_length, head, hist_len);
+    case 6:
+      run_echo(window_id, command);
     default:
-      wm_print(window_id, "Default");
+      wm_print(window_id, "Invalid command entered");
       break;
-  }
+  }//*/
 }
 
 int match_strings(char* str1, char* str2)
@@ -191,6 +266,8 @@ void run_echo(int window_id, char* command)
   free(cmd_to_prnt);
   wm_print(window_id, "%s", cmd_to_prnt);
 }
+
+
 
 void shell_process(PROCESS self, PARAM param)
 {
@@ -278,40 +355,28 @@ void shell_process(PROCESS self, PARAM param)
       command[i] = '\0';
     }
 
-    if(command[0] == '!')
+    _cmd_hist_node* new_command = (_cmd_hist_node*)  malloc(sizeof(_cmd_hist_node));
+    new_command->cmd = (char *) malloc((command_length + 1) * sizeof(char));
+    set_command(window_id, new_command->cmd, command);
+    new_command->next = NULL;
+    new_command->index = history_index;
+    history_index++;
+
+    if(first == NULL)
     {
-      run_exclamation(window_id, command, command_length, first, history_index);
+      //wm_print(window_id, "first node null");
+      first = new_command;
+      tail = new_command;
     }
     else
     {
-      _cmd_hist_node* new_command = (_cmd_hist_node*)  malloc(sizeof(_cmd_hist_node));
-      new_command->cmd = (char *) malloc((command_length + 1) * sizeof(char));
-      set_command(window_id, new_command->cmd, command);
-      new_command->next = NULL;
-      new_command->index = history_index;
-      history_index++;
-
-      if(first == NULL)
-      {
-        //wm_print(window_id, "first node null");
-        first = new_command;
-        tail = new_command;
-      }
-      else
-      {
-        //wm_print(window_id, "first node not null");
-        tail->next = new_command;
-        tail = tail->next;
-      }
-
-      if(k_memcmp(command, "echo", 4) == 0)
-        run_echo(window_id, command);
-      else
-      {
-        int match_found = find_command(command);
-        run_command(window_id, match_found, first);
-      }
+      //wm_print(window_id, "first node not null");
+      tail->next = new_command;
+      tail = tail->next;
     }
+
+    parse_cmd(window_id, command, command_length, first, history_index);
+
     wm_print(window_id, "\n>");
 
     for(int i = 0; i < 50; i++)
