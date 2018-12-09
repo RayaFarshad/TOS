@@ -174,9 +174,11 @@ void shell_process(PROCESS self, PARAM param)
   char command[50];
   _cmd_hist_node * first = NULL;
   _cmd_hist_node * tail = NULL;
-  int curr_index = 0;
+  int input_length = 0;
+  int command_length = 0;
   int history_index = 0;
-  int space_count = 0;
+  int starting_space_count = 0;
+  int mid_space_length = 0;
   int window_id = wm_create(10, 3, 50, 17);
   wm_print(window_id, ">");
 
@@ -187,7 +189,7 @@ void shell_process(PROCESS self, PARAM param)
     if(ch == ' ')
     {
       wm_print(window_id, "%c", ch);
-      space_count++;
+      input_length++;
       continue;
     }
 
@@ -197,49 +199,75 @@ void shell_process(PROCESS self, PARAM param)
       {
         //wm_print(window_id, "%d ", curr_index);
         //wm_print(window_id, "%d\n", space_count);
-        if(curr_index > 0)
+        if(command_length > 0)
         {
-          curr_index--;
-          command[curr_index] = '\0';
+          input_length--;
+          command_length--;
+          command[command_length] = '\0';
           wm_print(window_id, "%c", ch);
         }
-        else if(curr_index == 0 && space_count > 0)
+        else if(command_length == 0 && input_length > 0)
         {
-          space_count--;
+          input_length--;
           wm_print(window_id, "%c", ch);
         }
       }
 
       if(ch != 8)
       {
-        command[curr_index] = ch;
-        curr_index++;
-        wm_print(window_id, "%c", ch);
+        if(ch == ' ' && mid_space_length > 0)
+        {
+          wm_print(window_id, "%c", ch);
+        }
+        else
+        {
+          if(ch == ' ')
+          {
+            mid_space_length++;
+          }
+          else
+          {
+            mid_space_length = 0;
+          }
+
+          //else if(ch == ' ' && space_flag == 1)
+          //{
+            //space_flag = 0;
+          //}
+
+          command[command_length] = ch;
+          command_length++;
+          wm_print(window_id, "%c", ch);
+        }
       }
       //if(ch == 13)
       ch = keyb_get_keystroke(window_id, TRUE);
     }
+    mid_space_length = 0;
 
     wm_print(window_id, "\n");
     wm_print(window_id, "%s\n", command);
+    wm_print(window_id, "%d\n", command_length);
 
-    for(int i = curr_index - 1; i>0; i--)
+    for(int i = command_length - 1; i>0; i--) //remove whitespace from the end
     {
       if(command[i] != ' ')
         break;
 
+      command_length--;
       command[i] = '\0';
-      curr_index--;
     }
+
+
 
     if(command[0] == '!')
     {
-      run_exclamation(window_id, command, curr_index, first, history_index);
+      run_exclamation(window_id, command, command_length, first, history_index);
     }
     else
     {
       _cmd_hist_node* new_command = (_cmd_hist_node*)  malloc(sizeof(_cmd_hist_node));
-      new_command->cmd = (char *) malloc((curr_index + 1) * sizeof(char));
+      new_command->cmd = (char *) malloc((command_length + 1) * sizeof(char));
       set_command(window_id, new_command->cmd, command);
       new_command->next = NULL;
       new_command->index = history_index;
@@ -277,7 +305,7 @@ void shell_process(PROCESS self, PARAM param)
       command[i] = '\0';
     }
 
-    curr_index = 0;
+    command_length = 0;
   }
 
 }
