@@ -61,17 +61,25 @@ void print_command_history(int window_id, _cmd_hist_node* head)
   }
 }
 
-void exec_history_cmd(int window_id, _cmd_hist_node * node, int his_index)
+void exec_history_cmd(int window_id, _cmd_hist_node * node, int hist_index)
 {
   int i = 0;
 
   while(node->next != NULL)
   {
-    if(i == his_index)
+    if(i == hist_index)
     {
       wm_print(window_id, "%s\n", node->cmd);
-      int match_found = find_command(node->cmd);
-      run_command(window_id, match_found, node);
+
+      if(k_memcmp(node->cmd, "echo", 4) == 0)
+      {
+        run_echo(window_id, node->cmd);
+      }
+      else
+      {
+        int match_found = find_command(node->cmd);
+        run_command(window_id, match_found, node);
+      }
       return;
     }
 
@@ -127,8 +135,10 @@ int find_command(char* command)
 {
   for(int i = 0; i < command_length; i++)
   {
-    if(match_strings(command, commands[i]) == 1)
+    if(k_memcmp(command, commands[i], k_strlen(commands[i])) == 0)
       return i;
+    //if(match_strings(command, commands[i]) == 1)
+      //return i;
   }
 
   return -1;
@@ -166,7 +176,20 @@ void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * hi
 
 void run_echo(int window_id, char* command)
 {
+  int cmd_len = k_strlen(command);
+  int echo_len = k_strlen(command) - 5;
+  char * cmd_to_prnt = (char *) malloc((echo_len + 1) * sizeof(char));
+  int j =0;
 
+  for(int i = 5; i< cmd_len; i++)
+  {
+    cmd_to_prnt[j] = command[i];
+    j++;
+  }
+
+  wm_print(window_id, "%s", cmd_to_prnt);
+  free(cmd_to_prnt);
+  wm_print(window_id, "%s", cmd_to_prnt);
 }
 
 void shell_process(PROCESS self, PARAM param)
@@ -177,7 +200,6 @@ void shell_process(PROCESS self, PARAM param)
   int input_length = 0;
   int command_length = 0;
   int history_index = 0;
-  int starting_space_count = 0;
   int mid_space_length = 0;
   int window_id = wm_create(10, 3, 50, 17);
   wm_print(window_id, ">");
@@ -215,39 +237,37 @@ void shell_process(PROCESS self, PARAM param)
 
       if(ch != 8)
       {
-        if(ch == ' ' && mid_space_length > 0)
+        if(ch == ' ')
         {
-          wm_print(window_id, "%c", ch);
+          mid_space_length++;
         }
         else
         {
-          if(ch == ' ')
+          while(mid_space_length > 1)
           {
-            mid_space_length++;
+            input_length--;
+            command_length--;
+            command[command_length] = '\0';
+            mid_space_length--;
           }
-          else
-          {
-            mid_space_length = 0;
-          }
-
-          //else if(ch == ' ' && space_flag == 1)
-          //{
-            //space_flag = 0;
-          //}
+          mid_space_length = 0;
+        }
 
           command[command_length] = ch;
           command_length++;
+          input_length++;
           wm_print(window_id, "%c", ch);
-        }
+
       }
       //if(ch == 13)
       ch = keyb_get_keystroke(window_id, TRUE);
     }
     mid_space_length = 0;
+    input_length = 0;
 
     wm_print(window_id, "\n");
-    wm_print(window_id, "%s\n", command);
-    wm_print(window_id, "%d\n", command_length);
+    //wm_print(window_id, "%s\n", command);
+    //wm_print(window_id, "%d\n", command_length);
 
     for(int i = command_length - 1; i>0; i--) //remove whitespace from the end
     {
@@ -257,8 +277,6 @@ void shell_process(PROCESS self, PARAM param)
       command_length--;
       command[i] = '\0';
     }
-
-
 
     if(command[0] == '!')
     {
@@ -273,8 +291,6 @@ void shell_process(PROCESS self, PARAM param)
       new_command->index = history_index;
       history_index++;
 
-      //wm_print(window_id, "created node");
-
       if(first == NULL)
       {
         //wm_print(window_id, "first node null");
@@ -288,15 +304,13 @@ void shell_process(PROCESS self, PARAM param)
         tail = tail->next;
       }
 
-      //if(match_strings(command, 'echo')
-      //{
-        //run_echo(window_id,command);
-      //}
-      //else
-      //{
+      if(k_memcmp(command, "echo", 4) == 0)
+        run_echo(window_id, command);
+      else
+      {
         int match_found = find_command(command);
         run_command(window_id, match_found, first);
-      //}
+      }
     }
     wm_print(window_id, "\n>");
 
