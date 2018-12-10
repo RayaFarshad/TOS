@@ -152,15 +152,15 @@ void print_processes(int window_id)
 
 void print_history(int window_id, _cmd_hist_node * head)
 {
-
-  while(head != NULL)
+  _cmd_hist_node *temp = head;
+  while(temp != NULL)
   {
-    wm_print(window_id, "%d - %s\n",head->index, head->cmd);
-    head = head-> next;
+    wm_print(window_id, "%d - %s\n",temp->index, temp->cmd);
+    temp = temp-> next;
   }
 }
 
-void exec_history_cmd(int window_id, _cmd_hist_node * head, int hist_len)
+void exec_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int hist_len)
 {
   int i = 0;
 
@@ -205,7 +205,7 @@ void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * he
   }
   else
   {
-    exec_history_cmd(window_id, head, hist_index);
+    exec_history_cmd(window_id, hist_index, head, hist_len);
     return;
   }
 }
@@ -279,15 +279,15 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
   }
 }
 
-void run_command(int window_id, char * command, int cmd_len, _cmd_hist_node** head, int hist_len)
+void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, int hist_len)
 {
   int command_index;
 
-  if(command[0] == '!') // handle special case for excalamation
+  if(cmd[0] == '!') // handle special case for excalamation
   {
     command_index = 7;
   }
-  else if(k_memcmp(command, "echo", 4) == 0) // handle special case for echo
+  else if(k_memcmp(cmd, "echo", 4) == 0) // handle special case for echo
   {
     command_index = 8;
   }
@@ -395,7 +395,7 @@ void shell_process(PROCESS self, PARAM param)
           wm_print(window_id, "%c", ch);
 
       }
-      
+
       ch = keyb_get_keystroke(window_id, TRUE);
     }
     mid_space_length = 0;
