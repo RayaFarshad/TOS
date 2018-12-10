@@ -4,8 +4,8 @@ Student ID # 917932397
 */
 #include <kernel.h>
 
-const char *commands[] = {"cls", "ps", "pong", "shell", "history", "help", "about"};
-const int supported_commands_length = 7;
+const char *default_commands[] = {"cls", "ps", "pong", "shell", "history", "help", "about"};
+const int default_commands_length = 7;
 
 typedef struct cmd_hist_node {
   int index;
@@ -27,7 +27,7 @@ int str_to_int(char * num) //converting a string representation of number to int
   return new_int;
 }
 
-void set_command(char * history_cmd, char * new_cmd) //assign entered command to history node
+void set_command(char * history_cmd, char * new_cmd) //copy entered command to history node
 {
   int i = 0;
 
@@ -40,16 +40,64 @@ void set_command(char * history_cmd, char * new_cmd) //assign entered command to
   history_cmd[i+1] = '\0';
 }
 
-void run_echo(int window_id, char* command)
+int match_strings(char* str1, char* str2)
 {
-  int cmd_len = k_strlen(command);
-  int echo_len = k_strlen(command) - 5;
+   while( ( *str1 != '\0' && *str2 != '\0' ) && *str1 == *str2 )
+   {
+       str1++;
+       str2++;
+   }
+
+   if(*str1 == *str2)
+   {
+       return 1; // strings are identical
+   }
+
+   else
+   {
+       return 0;
+   }
+}
+
+int find_command(char* cmd) //search default_commands list to get the index of command passed
+{
+  for(int i = 0; i < default_commands_length; i++)
+  {
+    if(k_memcmp(cmd, default_commands[i], k_strlen(default_commands[i])) == 0)
+      return i;
+  }
+
+  return -1;
+}
+
+void print_help(int window_id)
+{
+  wm_print(window_id, "List of available commands\n");
+  wm_print(window_id, "help      - will print all supported TOS command\n");
+  wm_print(window_id, "cls       - clears the screen\n");
+  wm_print(window_id, "shell     - launches another shell\n");
+  wm_print(window_id, "pong      - launches pong game\n");
+  wm_print(window_id, "ps        - prints current process table\n");
+  wm_print(window_id, "history   - prints a history of commands typed in shell\n");
+  wm_print(window_id, "!<number> - repeats the command with given number which represents the index in history\n");
+  wm_print(window_id, "about     - information regarding TOS\n");
+}
+
+void print_about(int window_id)
+{
+  wm_print(window_id, "TOS is an OS written in C. \nCopyright Ali Alavi 2018\n");
+}
+
+void echo(int window_id, char* cmd)
+{
+  int cmd_len = k_strlen(cmd);
+  int echo_len = k_strlen(cmd) - 5; //ignore 'echo '
   char * cmd_to_prnt = (char *) malloc((echo_len + 1) * sizeof(char));
   int j =0;
 
   for(int i = 5; i< cmd_len; i++)
   {
-    cmd_to_prnt[j] = command[i];
+    cmd_to_prnt[j] = cmd[i];
     j++;
   }
 
@@ -102,117 +150,64 @@ void print_processes(int window_id)
   }
 }
 
-int match_strings(char* str1, char* str2)
+void print_history(int window_id, _cmd_hist_node * head)
 {
-   while( ( *str1 != '\0' && *str2 != '\0' ) && *str1 == *str2 )
-   {
-       str1++;
-       str2++;
-   }
 
-   if(*str1 == *str2)
-   {
-       return 1; // strings are identical
-   }
-
-   else
-   {
-       return 0;
-   }
-}
-
-int find_command(char* command)
-{
-  for(int i = 0; i < supported_commands_length; i++)
+  while(head != NULL)
   {
-    if(k_memcmp(command, commands[i], k_strlen(commands[i])) == 0)
-      return i;
-    //if(match_strings(command, commands[i]) == 1)
-      //return i;
-  }
-
-  return -1;
-}
-
-void print_command_history(int window_id, _cmd_hist_node* head)
-{
-  wm_print(window_id, "In print command history\n");
-  _cmd_hist_node *temp = head;
-
-  while(temp != NULL)
-  {
-    wm_print(window_id, "%d - %s\n",temp->index, temp->cmd);
-    temp = temp-> next;
-    //break;
+    wm_print(window_id, "%d - %s\n",head->index, head->cmd);
+    head = head-> next;
   }
 }
 
-void exec_history_cmd(int window_id, _cmd_hist_node * node, int hist_index)
+void exec_history_cmd(int window_id, _cmd_hist_node * head, int hist_len)
 {
   int i = 0;
 
-  while(node->next != NULL)
+  while(head->next != NULL)
   {
     if(i == hist_index)
     {
-      wm_print(window_id, "%s\n", node->cmd);
-      run_command(window_id, node->cmd, k_strlen(node->cmd), &node, hist_index);
+      wm_print(window_id, "%s\n", head->cmd);
+      run_command(window_id, head->cmd, k_strlen(head->cmd), &head, hist_len);
       break;
     }
     else
     {
       i++;
-      node = node->next;
+      head = head->next;
     }
   }
 }
 
-void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * his_node, int hist_len)
+void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * head, int hist_len)
 {
   int i = 1;
-  char * num = (char *) malloc(cmd_len * sizeof(char));
+  char * char_hist_index = (char *) malloc(cmd_len * sizeof(char));
 
-  while(cmd[i] != '\0')
+  while(cmd[i] != '\0') // check if characters after '!' are all numbers else throw error
   {
     if(cmd[i] < 48 || cmd[i] > 57)
     {
-      wm_print(window_id, "Invalid command");
+      wm_print(window_id, "Invalid command entered. Please enter history to see the list of supported commands");
       return;
     }
-    num[i - 1] = cmd[i];
+    char_hist_index[i - 1] = cmd[i];
     i++;
   }
 
-  int hist_index = str_to_int(num);
+  int hist_index = str_to_int(char_hist_index);
 
   if(hist_index > hist_len)
   {
-      wm_print(window_id, "Invalid index, total %d commands in history", hist_len);
+      wm_print(window_id, "Invalid number provided, total %d commands in history", hist_len);
       return;
   }
   else
   {
-    exec_history_cmd(window_id, his_node, hist_index);
+    exec_history_cmd(window_id, head, hist_index);
     return;
   }
-}
-
-void run_help(int window_id)
-{
-	wm_print(window_id, "List of available commands\n");
-	wm_print(window_id, "help      - will print all supported TOS command\n");
-	wm_print(window_id, "cls       - clears the screen\n");
-	wm_print(window_id, "shell     - launches another shell\n");
-	wm_print(window_id, "pong      - launches pong game\n");
-	wm_print(window_id, "ps        - prints current process table\n");
-	wm_print(window_id, "history   - prints a history of commands typed in shell\n");
-	wm_print(window_id, "!<number> - repeats the command with given number which represents the index in history\n");
-	wm_print(window_id, "about     - information regarding TOS\n");
-}
-
-void run_about(int window_id)
-{
-	wm_print(window_id, "TOS is an OS written in C. \nCopyright Ali Alavi 2018\n");
 }
 
 void add_to_history(int window_id, char * cmd, int cmd_len, _cmd_hist_node ** head, _cmd_hist_node ** tail, int * hist_len)
@@ -224,15 +219,13 @@ void add_to_history(int window_id, char * cmd, int cmd_len, _cmd_hist_node ** he
   new_hist_node->index = (*hist_len);
   (*hist_len)++;
 
-  if((*head) == NULL)
+  if((*head) == NULL) // head and tail both point to the first entry
   {
-    //wm_print(window_id, "first node null\n");
     *head = new_hist_node;
     *tail = new_hist_node;
   }
-  else
+  else // add new entries to tail
   {
-    //wm_print(window_id, "first node not null\n");
     (*tail)->next = new_hist_node;
     *tail = (*tail)->next;
   }
@@ -249,18 +242,18 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
 
   while(i < cmd_len + 1)
   {
-    if(command[i] == ';' || command[i] == '\0')
+    if(command[i] == ';' || command[i] == '\0') //split on ; or when command ends
     {
-        if(command[start] == ' ')
+        if(command[start] == ' ') // remove whitespace on the left
           start++;
 
-        if(command[i-1] == ' ')
+        if(command[i-1] == ' ') // remove whitespace on the right
         {
           right_space = 1;
           i--;
         }
 
-        sub_cmd_length = i - start;
+        sub_cmd_length = i - start; // sub command length
 
         sub_cmd = (char *) malloc((sub_cmd_length + 1) * sizeof(char));
 
@@ -271,11 +264,11 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
           j++;
         }
 
-        sub_cmd[sub_cmd_length] = '\0';
+        sub_cmd[sub_cmd_length] = '\0'; // terminate sub command string
 
-        run_command(window_id, sub_cmd, sub_cmd_length, head, hist_len);
+        run_command(window_id, sub_cmd, sub_cmd_length, head, hist_len); //execute the sub command
 
-        if(right_space)
+        if(right_space) // increment i if there was whitespace on the right initially
           i++;
 
         start = i + 1;
@@ -290,17 +283,17 @@ void run_command(int window_id, char * command, int cmd_len, _cmd_hist_node** he
 {
   int command_index;
 
-  if(command[0] == '!')
+  if(command[0] == '!') // handle special case for excalamation
   {
     command_index = 7;
   }
-  else if(k_memcmp(command, "echo", 4) == 0)
+  else if(k_memcmp(command, "echo", 4) == 0) // handle special case for echo
   {
     command_index = 8;
   }
   else
   {
-    command_index = find_command(command);
+    command_index = find_command(cmd); // search entered command in default_commands
   }
 
   switch(command_index) {
@@ -317,24 +310,24 @@ void run_command(int window_id, char * command, int cmd_len, _cmd_hist_node** he
       start_shell();
       break;
     case 4:
-      print_command_history(window_id, (*head));
+      print_history(window_id, (*head));
       break;
     case 5:
-      run_help(window_id);
+      print_help(window_id);
       break;
     case 6:
-      run_about(window_id);
+      print_about(window_id);
       break;
     case 7:
-      run_exclamation(window_id, command, cmd_len, (*head), hist_len);
+      run_exclamation(window_id, cmd, cmd_len, (*head), hist_len);
       break;
     case 8:
-      run_echo(window_id, command);
+      echo(window_id, cmd);
       break;
     default:
       wm_print(window_id, "Invalid command entered");
       break;
-  }//*/
+  }
 }
 
 void shell_process(PROCESS self, PARAM param)
@@ -353,19 +346,17 @@ void shell_process(PROCESS self, PARAM param)
   {
     char ch = keyb_get_keystroke(window_id, TRUE);
 
-    if(ch == ' ')
+    if(ch == ' ') // ignore whitespace
     {
       wm_print(window_id, "%c", ch);
       input_length++;
       continue;
     }
 
-    while(ch != 13)
+    while(ch != 13) // loop till user hits enter
     {
-      if(ch == 8)
+      if(ch == 8) // handle backspace
       {
-        //wm_print(window_id, "%d ", curr_index);
-        //wm_print(window_id, "%d\n", space_count);
         if(command_length > 0)
         {
           input_length--;
@@ -388,7 +379,7 @@ void shell_process(PROCESS self, PARAM param)
         }
         else
         {
-          while(mid_space_length > 1)
+          while(mid_space_length > 1) // remove extra space between two non-space characters
           {
             input_length--;
             command_length--;
@@ -404,13 +395,13 @@ void shell_process(PROCESS self, PARAM param)
           wm_print(window_id, "%c", ch);
 
       }
-      //if(ch == 13)
+      
       ch = keyb_get_keystroke(window_id, TRUE);
     }
     mid_space_length = 0;
     input_length = 0;
 
-    for(int i = command_length - 1; i>0; i--) //remove whitespace from the end
+    for(int i = command_length - 1; i > 0; i--) //remove whitespace from the end
     {
       if(command[i] != ' ')
         break;
@@ -421,15 +412,15 @@ void shell_process(PROCESS self, PARAM param)
 
     wm_print(window_id, "\n");
 
-    if(command_length != 0)
+    if(command_length != 0) // if empty command, ignore
     {
       add_to_history(window_id, command, command_length, &head, &tail, &history_length);
       parse_cmd(window_id, command, command_length, &head, &tail, history_length);
     }
 
-    wm_print(window_id, "\n>");
+    wm_print(window_id, "\n>"); // get new command
 
-    for(int i = 0; i < 50; i++)
+    for(int i = 0; i < 50; i++) // clear input command
     {
       command[i] = '\0';
     }
@@ -441,6 +432,5 @@ void shell_process(PROCESS self, PARAM param)
 
 void start_shell()
 {
-  //wm_print('add process');
   create_process(shell_process, 4, 0, "Shell Process");
 }
