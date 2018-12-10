@@ -411,7 +411,7 @@ void shell_process(PROCESS self, PARAM param)
         }
       }
 
-      
+
 
       ch = keyb_get_keystroke(window_id, TRUE);
     }
@@ -437,7 +437,7 @@ void shell_process(PROCESS self, PARAM param)
 
     wm_print(window_id, "\n>"); // get new command
 
-    for(int i = 0; i < 50; i++) // clear input command
+    for(int i = 0; i < MAX_INPUT; i++) // clear input command
     {
       command[i] = '\0';
     }
