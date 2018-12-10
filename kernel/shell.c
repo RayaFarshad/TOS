@@ -5,13 +5,20 @@ Student ID # 917932397
 #include <kernel.h>
 
 const char *default_commands[] = {"cls", "ps", "pong", "shell", "history", "help", "about"};
-const int default_commands_length = 7;
 
 typedef struct cmd_hist_node {
   int index;
   char *cmd;
   struct cmd_hist_node *next;
 } _cmd_hist_node;
+
+#define DEFAULT_COMMANDS_LENGTH 7
+#define MAX_INPUT 50
+
+#define ASCII_ZERO 48
+#define ASCII_NINE 57
+#define CARRIAGE_RETURN 13 
+#define BACKSPACE 8
 
 int str_to_int(char * num) //converting a string representation of number to int
 {
@@ -20,7 +27,7 @@ int str_to_int(char * num) //converting a string representation of number to int
 
   while(num[i] != '\0')
   {
-    new_int = new_int * 10 + ((int)num[i] - 48);
+    new_int = new_int * 10 + ((int)num[i] - ASCII_ZERO);
     i++;
   }
 
@@ -40,28 +47,9 @@ void set_command(char * history_cmd, char * new_cmd) //copy entered command to h
   history_cmd[i+1] = '\0';
 }
 
-int match_strings(char* str1, char* str2)
-{
-   while( ( *str1 != '\0' && *str2 != '\0' ) && *str1 == *str2 )
-   {
-       str1++;
-       str2++;
-   }
-
-   if(*str1 == *str2)
-   {
-       return 1; // strings are identical
-   }
-
-   else
-   {
-       return 0;
-   }
-}
-
 int find_command(char* cmd) //search default_commands list to get the index of command passed
 {
-  for(int i = 0; i < default_commands_length; i++)
+  for(int i = 0; i < DEFAULT_COMMANDS_LENGTH; i++)
   {
     if(k_memcmp(cmd, default_commands[i], k_strlen(default_commands[i])) == 0)
       return i;
@@ -182,12 +170,12 @@ void exec_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int 
 
 void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * head, int hist_len)
 {
-  int i = 1;
+  int i = 1; // ignore '!'
   char * char_hist_index = (char *) malloc(cmd_len * sizeof(char));
 
   while(cmd[i] != '\0') // check if characters after '!' are all numbers else throw error
   {
-    if(cmd[i] < 48 || cmd[i] > 57)
+    if(cmd[i] < ASCII_ZERO || cmd[i] > ASCII_NINE)
     {
       wm_print(window_id, "Invalid command entered. Please enter history to see the list of supported commands");
       return;
@@ -236,7 +224,7 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
   int start = 0;
   int i = 0;
   char * sub_cmd;
-  int sub_cmd_length;
+  int sub_cmd_len;
   int j = 0;
   int right_space = 0;
 
@@ -253,9 +241,9 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
           i--;
         }
 
-        sub_cmd_length = i - start; // sub command length
+        sub_cmd_len = i - start; // sub command length
 
-        sub_cmd = (char *) malloc((sub_cmd_length + 1) * sizeof(char));
+        sub_cmd = (char *) malloc((sub_cmd_len + 1) * sizeof(char));
 
         while(start < i)
         {
@@ -264,9 +252,9 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
           j++;
         }
 
-        sub_cmd[sub_cmd_length] = '\0'; // terminate sub command string
+        sub_cmd[sub_cmd_len] = '\0'; // terminate sub command string
 
-        run_command(window_id, sub_cmd, sub_cmd_length, head, hist_len); //execute the sub command
+        run_command(window_id, sub_cmd, sub_cmd_len, head, hist_len); //execute the sub command
 
         if(right_space) // increment i if there was whitespace on the right initially
           i++;
@@ -332,7 +320,7 @@ void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, 
 
 void shell_process(PROCESS self, PARAM param)
 {
-  char command[50];
+  char command[MAX_INPUT];
   _cmd_hist_node * head = NULL;
   _cmd_hist_node * tail = NULL;
   int input_length = 0;
@@ -353,9 +341,9 @@ void shell_process(PROCESS self, PARAM param)
       continue;
     }
 
-    while(ch != 13) // loop till user hits enter
+    while(ch != CARRIAGE_RETURN) // loop till user hits enter
     {
-      if(ch == 8) // handle backspace
+      if(ch == BACKSPACE) // handle backspace
       {
         if(command_length > 0)
         {
@@ -371,7 +359,7 @@ void shell_process(PROCESS self, PARAM param)
         }
       }
 
-      if(ch != 8)
+      if(ch != BACKSPACE)
       {
         if(ch == ' ')
         {
