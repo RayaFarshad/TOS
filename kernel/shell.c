@@ -6,12 +6,6 @@ Student ID # 917932397
 
 const char *default_commands[] = {"cls", "ps", "pong", "shell", "history", "help", "about"};
 
-typedef struct cmd_hist_node {
-  int index;
-  char *cmd;
-  struct cmd_hist_node *next;
-} _cmd_hist_node;
-
 #define DEFAULT_COMMANDS_LENGTH 7
 #define MAX_INPUT 50
 
@@ -19,6 +13,34 @@ typedef struct cmd_hist_node {
 #define ASCII_NINE 57
 #define CARRIAGE_RETURN 13 
 #define BACKSPACE 8
+
+typedef struct cmd_hist_node {
+  int index;
+  char *cmd;
+  struct cmd_hist_node *next;
+} _cmd_hist_node;
+
+// function declarations //
+
+int str_to_int(char * num);
+void set_command(char * history_cmd, char * new_cmd);
+int find_command(char* cmd);
+void print_help(int window_id);
+void print_about(int window_id);
+void echo(int window_id, char* cmd);
+void shell_print_process_heading(int window_id);
+void shell_print_process_details(int window_id, PROCESS p);
+void print_processes(int window_id);
+void print_history(int window_id, _cmd_hist_node * head);
+void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int hist_len);
+void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * head, int hist_len);
+void add_to_history(int window_id, char * cmd, int cmd_len, _cmd_hist_node ** head, _cmd_hist_node ** tail, int * hist_len);
+void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head, _cmd_hist_node** tail, int hist_len);
+void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, int hist_len);
+void shell_process(PROCESS self, PARAM param);
+void start_shell();
+
+// function implementations //
 
 int str_to_int(char * num) //converting a string representation of number to int
 {
@@ -148,7 +170,7 @@ void print_history(int window_id, _cmd_hist_node * head)
   }
 }
 
-void exec_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int hist_len)
+void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int hist_len)
 {
   int i = 0;
 
