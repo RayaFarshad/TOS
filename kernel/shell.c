@@ -54,8 +54,6 @@ void run_echo(int window_id, char* command)
   }
 
   wm_print(window_id, "%s\n", cmd_to_prnt);
-  //free(cmd_to_prnt);
-  //wm_print(window_id, "%s", cmd_to_prnt);
 }
 
 void shell_print_process_heading(int window_id)
@@ -155,31 +153,23 @@ void exec_history_cmd(int window_id, _cmd_hist_node * node, int hist_index)
 
   while(node->next != NULL)
   {
-    wm_print(window_id, "%s\n", node->cmd);
     if(i == hist_index)
     {
       wm_print(window_id, "%s\n", node->cmd);
-
-      if(k_memcmp(node->cmd, "echo", 4) == 0)
-      {
-        run_echo(window_id, node->cmd);
-      }
-      else
-      {
-        int match_found = find_command(node->cmd);
-        run_command(window_id, match_found, node);
-      }
-      return;
+      run_command(window_id, node->cmd, k_strlen(node->cmd), &node, hist_index);
+      break;
     }
-
-    i++;
-    node = node->next;
+    else
+    {
+      i++;
+      node = node->next;
+    }
   }
 }
 
 void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * his_node, int hist_len)
 {
-  int i = 0;
+  int i = 1;
   char * num = (char *) malloc(cmd_len * sizeof(char));
 
   while(cmd[i] != '\0')
@@ -227,14 +217,12 @@ void run_about(int window_id)
 
 void add_to_history(int window_id, char * cmd, int cmd_len, _cmd_hist_node ** head, _cmd_hist_node ** tail, int * hist_len)
 {
-  wm_print(window_id, "Adding to history command: %s\n", cmd);
   _cmd_hist_node* new_hist_node = (_cmd_hist_node*)  malloc(sizeof(_cmd_hist_node));
   new_hist_node->cmd = (char *) malloc((cmd_len + 1) * sizeof(char));
   set_command(new_hist_node->cmd, cmd);
   new_hist_node->next = NULL;
   new_hist_node->index = (*hist_len);
   (*hist_len)++;
-  wm_print(window_id, "New history command: %s\n", new_hist_node->cmd);
 
   if((*head) == NULL)
   {
@@ -315,8 +303,6 @@ void run_command(int window_id, char * command, int cmd_len, _cmd_hist_node** he
     command_index = find_command(command);
   }
 
-  wm_print(window_id, "Command index: %d", command_index);
-
   switch(command_index) {
     case 0:
       wm_clear(window_id);
@@ -350,9 +336,6 @@ void run_command(int window_id, char * command, int cmd_len, _cmd_hist_node** he
       break;
   }//*/
 }
-
-
-
 
 void shell_process(PROCESS self, PARAM param)
 {
@@ -436,18 +419,15 @@ void shell_process(PROCESS self, PARAM param)
       command[i] = '\0';
     }
 
-    if(command_length == 0)
-    {
-      wm_print(window_id, "\n>");
-    }
-    else
+    wm_print(window_id, "\n");
+
+    if(command_length != 0)
     {
       add_to_history(window_id, command, command_length, &head, &tail, &history_length);
-      //wm_print(window_id, "%s\n", head->cmd);
-      //wm_print(window_id, "%d\n>", history_length);
       parse_cmd(window_id, command, command_length, &head, &tail, history_length);
-      wm_print(window_id, "\n>");
     }
+
+    wm_print(window_id, "\n>");
 
     for(int i = 0; i < 50; i++)
     {
