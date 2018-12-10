@@ -11,8 +11,10 @@ const char *default_commands[] = {"cls", "ps", "pong", "shell", "history", "help
 
 #define ASCII_ZERO 48
 #define ASCII_NINE 57
-#define CARRIAGE_RETURN 13 
+#define CARRIAGE_RETURN 13
 #define BACKSPACE 8
+
+char * invalid_cmd = "Invalid command entered. Please enter history to see the list of supported commands";
 
 typedef struct cmd_hist_node {
   int index;
@@ -199,7 +201,7 @@ void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * he
   {
     if(cmd[i] < ASCII_ZERO || cmd[i] > ASCII_NINE)
     {
-      wm_print(window_id, "Invalid command entered. Please enter history to see the list of supported commands");
+      wm_print(window_id, invalid_cmd);
       return;
     }
     char_hist_index[i - 1] = cmd[i];
@@ -215,7 +217,7 @@ void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * he
   }
   else
   {
-    exec_history_cmd(window_id, hist_index, head, hist_len);
+    run_history_cmd(window_id, hist_index, head, hist_len);
     return;
   }
 }
@@ -335,7 +337,7 @@ void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, 
       echo(window_id, cmd);
       break;
     default:
-      wm_print(window_id, "Invalid command entered");
+      wm_print(window_id, invalid_cmd);
       break;
   }
 }
