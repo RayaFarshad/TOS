@@ -34,11 +34,11 @@ void shell_print_process_heading(int window_id);
 void shell_print_process_details(int window_id, PROCESS p);
 void print_processes(int window_id);
 void print_history(int window_id, _cmd_hist_node * head);
-void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int hist_len);
-void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * head, int hist_len);
+void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head,_cmd_hist_node * tail, int hist_len);
+void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * head, _cmd_hist_node * tail,int hist_len);
 void add_to_history(int window_id, char * cmd, int cmd_len, _cmd_hist_node ** head, _cmd_hist_node ** tail, int * hist_len);
 void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head, _cmd_hist_node** tail, int hist_len);
-void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, int hist_len);
+void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, _cmd_hist_node** tail, int hist_len);
 void shell_process(PROCESS self, PARAM param);
 void start_shell();
 
@@ -172,7 +172,7 @@ void print_history(int window_id, _cmd_hist_node * head)
   }
 }
 
-void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int hist_len)
+void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, _cmd_hist_node * tail, int hist_len)
 {
   int i = 0;
 
@@ -181,7 +181,7 @@ void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int h
     if(i == hist_index)
     {
       wm_print(window_id, "%s\n", head->cmd);
-      run_command(window_id, head->cmd, k_strlen(head->cmd), &head, hist_len);
+      parse_cmd(window_id, head->cmd, k_strlen(head->cmd), &head, &tail, hist_len);
       break;
     }
     else
@@ -192,7 +192,7 @@ void run_history_cmd(int window_id, int hist_index, _cmd_hist_node * head, int h
   }
 }
 
-void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * head, int hist_len)
+void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * head, _cmd_hist_node * tail, int hist_len)
 {
   int i = 1; // ignore '!'
   char * char_hist_index = (char *) malloc(cmd_len * sizeof(char));
@@ -217,7 +217,7 @@ void run_exclamation(int window_id, char * cmd, int cmd_len, _cmd_hist_node * he
   }
   else
   {
-    run_history_cmd(window_id, hist_index, head, hist_len);
+    run_history_cmd(window_id, hist_index, head, tail, hist_len);
     return;
   }
 }
@@ -278,7 +278,7 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
 
         sub_cmd[sub_cmd_len] = '\0'; // terminate sub command string
 
-        run_command(window_id, sub_cmd, sub_cmd_len, head, hist_len); //execute the sub command
+        run_command(window_id, sub_cmd, sub_cmd_len, head, tail, hist_len); //execute the sub command
 
         if(right_space) // increment i if there was whitespace on the right initially
           i++;
@@ -291,7 +291,7 @@ void parse_cmd(int window_id, char * command, int cmd_len, _cmd_hist_node** head
   }
 }
 
-void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, int hist_len)
+void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, _cmd_hist_node** tail, int hist_len)
 {
   int command_index;
 
@@ -331,7 +331,7 @@ void run_command(int window_id, char * cmd, int cmd_len, _cmd_hist_node** head, 
       print_about(window_id);
       break;
     case 7:
-      run_exclamation(window_id, cmd, cmd_len, (*head), hist_len);
+      run_exclamation(window_id, cmd, cmd_len, (*head), (*tail), hist_len);
       break;
     case 8:
       echo(window_id, cmd);
