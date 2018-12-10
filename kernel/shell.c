@@ -14,7 +14,7 @@ const char *default_commands[] = {"cls", "ps", "pong", "shell", "history", "help
 #define CARRIAGE_RETURN 13
 #define BACKSPACE 8
 
-char * invalid_cmd = "Invalid command entered. Please enter history to see the list of supported commands";
+char * invalid_cmd = "Invalid command entered. Please enter help to see the list of supported commands";
 
 typedef struct cmd_hist_node {
   int index;
@@ -73,9 +73,10 @@ void set_command(char * history_cmd, char * new_cmd) //copy entered command to h
 
 int find_command(char* cmd) //search default_commands list to get the index of command passed
 {
+
   for(int i = 0; i < DEFAULT_COMMANDS_LENGTH; i++)
   {
-    if(k_memcmp(cmd, default_commands[i], k_strlen(default_commands[i])) == 0)
+    if(k_memcmp(cmd, default_commands[i], k_strlen(cmd)) == 0)
       return i;
   }
 
