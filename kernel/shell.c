@@ -367,6 +367,34 @@ void shell_process(PROCESS self, PARAM param)
 
     while(ch != CARRIAGE_RETURN) // loop till user hits enter
     {
+      if(input_length < MAX_INPUT)
+      {
+        if(ch != BACKSPACE)
+        {
+          if(ch == ' ')
+          {
+            mid_space_length++;
+          }
+          else
+          {
+            while(mid_space_length > 1) // remove extra space between two non-space characters
+            {
+              input_length--;
+              command_length--;
+              command[command_length] = '\0';
+              mid_space_length--;
+            }
+            mid_space_length = 0;
+          }
+
+            command[command_length] = ch;
+            command_length++;
+            input_length++;
+            wm_print(window_id, "%c", ch);
+
+        }
+      }
+
       if(ch == BACKSPACE) // handle backspace
       {
         if(command_length > 0)
@@ -383,30 +411,7 @@ void shell_process(PROCESS self, PARAM param)
         }
       }
 
-      if(ch != BACKSPACE)
-      {
-        if(ch == ' ')
-        {
-          mid_space_length++;
-        }
-        else
-        {
-          while(mid_space_length > 1) // remove extra space between two non-space characters
-          {
-            input_length--;
-            command_length--;
-            command[command_length] = '\0';
-            mid_space_length--;
-          }
-          mid_space_length = 0;
-        }
-
-          command[command_length] = ch;
-          command_length++;
-          input_length++;
-          wm_print(window_id, "%c", ch);
-
-      }
+      
 
       ch = keyb_get_keystroke(window_id, TRUE);
     }
