@@ -7,7 +7,7 @@ This program solves the model train track challenge
 char res_buf[3];
 int zambonie = 0;
 int config = 0;
-int num_of_ticks = 4;
+int num_of_ticks = 3;
 #include <kernel.h>
 
 void send_com_message(int input_buf_len, char * cmd)
@@ -139,7 +139,7 @@ void solve_config_one(int window_id)
   start_train();
 
   check_segment("C10\015"); // zambonie passes above wagon entry
-  check_segment("C14\015"); // train is close, tim to switch
+  //check_segment("C14\015"); // train is close, tim to switch
   flip_switch("M8R\015");
 
   check_segment("C12\015"); // train is attached to wagon, switch and stop
