@@ -135,33 +135,55 @@ void find_config(int window_id)
 
 void solve_config_one(int window_id)
 {
-  check_segment("C07\015"); // zambonie passes, time to start the train
-  start_train();
 
-  check_segment("C10\015"); // zambonie passes above wagon entry
-  //check_segment("C14\015"); // train is close, tim to switch
-  flip_switch("M8R\015");
+  if(zambonie == 1)
+  {
+    check_segment("C07\015"); // zambonie passes, time to start the train
+    start_train();
 
-  check_segment("C12\015"); // train is attached to wagon, switch and stop
-  flip_switch("M8G\015");
-  stop_train();
+    check_segment("C10\015"); // zambonie passes above wagon entry, flip switch
+    flip_switch("M8R\015");
 
-  flip_switch("M7G\015"); // get ready for reverse train run
-  flip_switch("M6G\015");
+    check_segment("C12\015"); // train is attached to wagon, switch and stop
+    flip_switch("M8G\015");
+    stop_train();
+
+    flip_switch("M7G\015"); // get ready for reverse train run
+    flip_switch("M6G\015");
 
 
-  check_segment("C07\015"); // zamboni on 7
-  check_segment("C06\015"); // zamboni is off 7, time to start train again
-  reverse_train();
+    check_segment("C07\015"); // zamboni on 7
+    check_segment("C06\015"); // zamboni is off 7, time to start train again
+    reverse_train();
 
-  check_segment("C07\015"); // train is ready for reversal, flip switches and reverse
-  flip_switch("M5R\015");
-  flip_switch("M6R\015");
-  reverse_train();
+    check_segment("C07\015"); // train is ready for reversal, flip switches and reverse
+    flip_switch("M5R\015");
+    flip_switch("M6R\015");
+    reverse_train();
 
-  check_segment("C08\015"); // train is back to start point, flip switch
-  flip_switch("M5G\015");
-  stop_train(); // victory
+    check_segment("C08\015"); // train is back to start point, flip switch
+    flip_switch("M5G\015");
+    stop_train(); // victory
+  }
+  else
+  {
+    start_train();
+    flip_switch("M8R\015");
+
+    check_segment("C12\015"); // train is attached to wagon, stop, switch, and reverse
+    stop_train();
+    flip_switch("M7G\015");
+    flip_switch("M6G\015");
+    reverse_train();
+
+    check_segment("C06\015"); // time to reverse train
+    flip_switch("M5R\015");
+    flip_switch("M6R\015");
+    reverse_train();
+
+    check_segment("C08\015"); // train is back to start point, stop
+    stop_train(); // victory
+  }
 
 }
 
