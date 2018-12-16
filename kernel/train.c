@@ -5,7 +5,9 @@ This program solves the model train track challenge
 */
 
 char res_buf[3];
-int zambonie_found = 0;
+int zambonie = 0;
+int config = 0;
+int num_of_ticks = 5;
 #include <kernel.h>
 
 void send_com_message(int input_buf_len, char * cmd)
@@ -40,42 +42,164 @@ void init_track_switches()
     send_com_message(0, switches[i]);
 }
 
+char probe_segment(char * cmd_segment)
+{
+  //wm_print(window_id, "Probing %s\n", cmd_segment);
+  send_com_message(0,"R\015");
+  send_com_message(3,cmd_segment);
+  return res_buf[1];
+}
+
+void start_train()
+{
+  send_com_message(0,"L20S5\015");
+}
+
+void stop_train()
+{
+  send_com_message(0,"L20S0\015");
+}
+
+void reverse_direction()
+{
+  send_com_message(0,"L20D\015");
+}
+
+void reverse_train()
+{
+  stop_train();
+  reverse_direction();
+  start_train();
+}
+
+void flip_switch(char * switch_cmd)
+{
+  send_com_message(0, switch_cmd);
+}
+
+check_segment(char * sgmnt_cmd)
+{
+  while(probe_segment(sgmnt_cmd) == '0')
+  {
+    sleep(num_of_ticks);
+  }
+}
+
 void check_zambonie(int window_id)
 {
   int i = 0;
 
-  while(i < 40)
+  while(i < 3)
   {
     send_com_message(0,"R\015");
     send_com_message(3,"C10\015"); // segment in between both starting points for Zambonie
 
     if((char)res_buf[1] == '1')
     {
-      zambonie_found = 1;
+      zambonie = 1;
       return;
     }
 
-    sleep(5);
+    sleep(4);
     i++;
   }
 
   return;
 }
 
+void find_config(int window_id)
+{
+  char * probe_train_cmds[4] = {
+    "C8\015",
+    "C12\015",
+    "C2\015",
+    "C5\015"
+  };
+
+  char * probe_wagon_cmds[4] = {
+    "",
+    "C2\015",
+    "C11\015",
+    ""
+  };
+
+  for(int i = 0; i < 4; i++)
+  {
+    if(probe_segment(probe_train_cmds[i]) == '1' && (k_memcmp("", probe_train_cmds[i], 0) == 0 || probe_segment(probe_wagon_cmds[i]) == '1'))
+    {
+      config = i + 1;
+      break;
+    }
+  }
+}
+
+void solve_config_one(int window_id)
+{
+  flip_switch("M6G\015");
+
+  check_segment("C07\015");
+
+  start_train();
+
+  check_segment("C10\015");
+
+  check_segment("C13\015");
+
+  flip_switch("M8R\015");
+
+  check_segment("C11\015");
+
+  flip_switch("M8G\015");
+
+  check_segment("C12\015");
+
+  flip_switch("M7G\015");
+  flip_switch("M6G\015");
+  stop_train();
+
+  check_segment("C07\015");
+  reverse_train();
+  flip_switch("M6R\015");
+
+  check_segment("C06\015");
+  check_segment("C07\015");
+  flip_switch("M5R\015");
+  reverse_train();
+
+  check_segment("C08\015");
+  flip_switch("M5G\015");
+  stop_train();
+
+}
+
 void train_process(PROCESS self, PARAM param)
 {
-  int window_id = wm_create(6, 4, 15, 15);
-  wm_print(window_id, "Setting up outer switches\n");
+  int window_id = wm_create(6, 4, 20, 20);
+  wm_print(window_id, "Setting up outer switches to keep Zambonie in the outer loop\n");
   init_track_switches();
+  wm_print(window_id, "Checking for Zambonie\n");
   check_zambonie(window_id);
 
-  if(zambonie_found)
-    wm_print(window_id, "Zambonie Found");
+  if(zambonie)
+    wm_print(window_id, "Zambonie Found\n");
   else
-    wm_print(window_id, "Zambonie Not Found");
+    wm_print(window_id, "Zambonie Not Found\n");
+
+  wm_print(window_id, "Finding config\n");
+  find_config(window_id);
+
+  if(config == 0)
+  {
+    wm_print(window_id, "Invalid Config\n");
+  }
+  else
+    wm_print(window_id, "Config %d found", config);
+
+  solve_config_one(window_id);
 }
 
 void init_train()
 {
-  PORT pr = create_process(train_process, 6, 0, "train process");
+  create_process(train_process, 6, 0, "train process");
+  resign();
 }
