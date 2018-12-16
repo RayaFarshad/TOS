@@ -7,7 +7,7 @@ This program solves the model train track challenge
 char res_buf[3];
 int zambonie = 0;
 int config = 0;
-int num_of_ticks = 5;
+int num_of_ticks = 4;
 #include <kernel.h>
 
 void send_com_message(int input_buf_len, char * cmd)
@@ -77,7 +77,7 @@ void flip_switch(char * switch_cmd)
   send_com_message(0, switch_cmd);
 }
 
-check_segment(char * sgmnt_cmd)
+void check_segment(char * sgmnt_cmd)
 {
   while(probe_segment(sgmnt_cmd) == '0')
   {
@@ -135,40 +135,33 @@ void find_config(int window_id)
 
 void solve_config_one(int window_id)
 {
-  flip_switch("M6G\015");
-
-  check_segment("C07\015");
-
+  check_segment("C07\015"); // zambonie passes, time to start the train
   start_train();
 
-  check_segment("C10\015");
-
-  check_segment("C13\015");
-
+  check_segment("C10\015"); // zambonie passes above wagon entry
+  check_segment("C14\015"); // train is close, tim to switch
   flip_switch("M8R\015");
 
-  check_segment("C11\015");
-
+  check_segment("C12\015"); // train is attached to wagon, switch and stop
   flip_switch("M8G\015");
+  stop_train();
 
-  check_segment("C12\015");
-
-  flip_switch("M7G\015");
+  flip_switch("M7G\015"); // get ready for reverse train run
   flip_switch("M6G\015");
-  stop_train();
 
-  check_segment("C07\015");
+
+  check_segment("C07\015"); // zamboni on 7
+  check_segment("C06\015"); // zamboni is off 7, time to start train again
   reverse_train();
-  flip_switch("M6R\015");
 
-  check_segment("C06\015");
-  check_segment("C07\015");
+  check_segment("C07\015"); // train is ready for reversal, flip switches and reverse
   flip_switch("M5R\015");
+  flip_switch("M6R\015");
   reverse_train();
 
-  check_segment("C08\015");
+  check_segment("C08\015"); // train is back to start point, flip switch
   flip_switch("M5G\015");
-  stop_train();
+  stop_train(); // victory
 
 }
 
