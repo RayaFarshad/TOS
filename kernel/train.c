@@ -89,7 +89,7 @@ void check_zambonie(int window_id)
 {
   int i = 0;
 
-  while(i < 3)
+  while(i < 20)
   {
     send_com_message(0,"R\015");
     send_com_message(3,"C10\015"); // segment in between both starting points for Zambonie
@@ -187,6 +187,53 @@ void solve_config_one(int window_id)
 
 }
 
+void solve_config_two(int window_id)
+{
+  flip_switch("M2R\015");
+  flip_switch("M7G\015");
+  flip_switch("M6G\015");
+  flip_switch("M3G\015");
+
+  if(zambonie == 1)
+  {
+    check_segment("C03\015"); // zambonie passes, time to start the train
+    flip_switch("M1R\015");
+    start_train();
+
+    check_segment("C14\015"); // reverse train, flip switch
+    flip_switch("M2G\015");
+    reverse_train();
+
+    check_segment("C01\015"); // train is attached to wagon, switch and stop
+    flip_switch("M1G\015");
+
+    check_segment("C02\015");
+    stop_train();
+
+    check_segment("C10\015");
+    flip_switch("M5R\015");
+    start_train();
+
+    check_segment("C12\015"); // train is back to start point, flip switch
+    flip_switch("M5G\015");
+    stop_train(); // victory
+  }
+  else
+  {
+    flip_switch("M5R\015");
+    flip_switch("M1R\015");
+    start_train();
+
+    check_segment("C14\015"); // reverse train, flip switch
+    flip_switch("M2G\015");
+    reverse_train();
+
+    check_segment("C12\015"); // train is back to start point, flip switch
+    stop_train(); // victory
+  }
+
+}
+
 void train_process(PROCESS self, PARAM param)
 {
   int window_id = wm_create(6, 4, 20, 20);
@@ -210,7 +257,8 @@ void train_process(PROCESS self, PARAM param)
   else
     wm_print(window_id, "Config %d found", config);
 
-  solve_config_one(window_id);
+  //solve_config_one(window_id);
+  solve_config_two(window_id);
 }
 
 void init_train()
