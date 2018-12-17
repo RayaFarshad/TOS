@@ -234,6 +234,56 @@ void solve_config_two(int window_id)
 
 }
 
+void solve_config_three(int window_id)
+{
+  flip_switch("M7R\015");
+  flip_switch("M3G\015");
+  flip_switch("M4R\015");
+
+  if(zambonie == 1)
+  {
+    check_segment("C14\015"); // zambonie passes, time to start the train
+    start_train();
+
+    check_segment("C03\015");
+    flip_switch("M1R\015");
+    flip_switch("M2R\015");
+
+    check_segment("C12\015");
+    flip_switch("M1G\015");
+
+    check_segment("C11\015");
+    stop_train();
+    flip_switch("M2G\015");
+
+    check_segment("C03\015");
+    flip_switch("M8R\015");
+    flip_switch("M1R\015");
+    start_train();
+
+    check_segment("C2\015");
+    flip_switch("M1G\015");
+    stop_train(); // victory
+  }
+  else
+  {
+    start_train();
+
+    flip_switch("M1R\015");
+    flip_switch("M2R\015");
+
+    check_segment("C12\015");
+    flip_switch("M2G\015");
+
+    flip_switch("M8R\015");
+    flip_switch("M1R\015");
+
+    check_segment("C2\015");
+    stop_train(); // victory
+  }
+
+}
+
 void train_process(PROCESS self, PARAM param)
 {
   int window_id = wm_create(6, 4, 20, 20);
@@ -258,7 +308,8 @@ void train_process(PROCESS self, PARAM param)
     wm_print(window_id, "Config %d found", config);
 
   //solve_config_one(window_id);
-  solve_config_two(window_id);
+  //solve_config_two(window_id);
+  solve_config_three(window_id);
 }
 
 void init_train()
