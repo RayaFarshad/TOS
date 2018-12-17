@@ -55,6 +55,11 @@ void start_train()
   send_com_message(0,"L20S5\015");
 }
 
+void slow_train()
+{
+  send_com_message(0,"L20S4\015");
+}
+
 void stop_train()
 {
   send_com_message(0,"L20S0\015");
@@ -110,31 +115,41 @@ void check_zambonie(int window_id)
 void find_config(int window_id)
 {
   char * probe_train_cmds[4] = {
-    "C8\015",
-    "C12\015",
-    "C2\015",
-    "C5\015"
+    "C8\015\0",
+    "C12\015\0",
+    "C2\015\0",
+    "C5\015\0"
   };
 
   char * probe_wagon_cmds[4] = {
-    "",
-    "C2\015",
-    "C11\015",
-    ""
+    " ",
+    "C2\015\0",
+    "C11\015\0",
+    " "
   };
 
   for(int i = 0; i < 4; i++)
   {
-    if(probe_segment(probe_train_cmds[i]) == '1' && (k_memcmp("", probe_train_cmds[i], 0) == 0 || probe_segment(probe_wagon_cmds[i]) == '1'))
+    wm_print(window_id, "Probing segment %s for train\n", probe_train_cmds[i]);
+    if(probe_segment(probe_train_cmds[i]) == '1')
     {
-      config = i + 1;
-      break;
+      int wagon_probe = k_memcmp(" ", probe_wagon_cmds[i], 1);
+
+      if(wagon_probe != 0 )
+        wm_print(window_id, "Probing segment %s for wagon\n", probe_train_cmds[i]);
+
+      if(wagon_probe == 0 || probe_segment(probe_wagon_cmds[i]) == '1')
+      {
+        config = i + 1;
+        break;
+      }
     }
   }
 }
 
 void solve_config_one(int window_id)
 {
+  wm_print(window_id, "Solving for config 1\n");
 
   if(zambonie == 1)
   {
@@ -189,6 +204,8 @@ void solve_config_one(int window_id)
 
 void solve_config_two(int window_id)
 {
+  wm_print(window_id, "Solving for config 2\n");
+
   flip_switch("M2R\015");
   flip_switch("M7G\015");
   flip_switch("M6G\015");
@@ -236,6 +253,8 @@ void solve_config_two(int window_id)
 
 void solve_config_three(int window_id)
 {
+  wm_print(window_id, "Solving for config 3\n");
+
   flip_switch("M7R\015");
   flip_switch("M3G\015");
   flip_switch("M4R\015");
@@ -284,12 +303,70 @@ void solve_config_three(int window_id)
 
 }
 
+void solve_config_four(int window_id)
+{
+  wm_print(window_id, "Solving for config 4\n");
+
+  flip_switch("M7G\015");
+  flip_switch("M6G\015");
+  flip_switch("M5R\015");
+
+  if(zambonie == 1)
+  {
+    check_segment("C4\015"); // zambonie passes, time to start the train
+    start_train();
+
+    check_segment("C10\015");
+    check_segment("C03\015");
+    flip_switch("M4R\015");
+    flip_switch("M3R\015");
+
+    slow_train();
+    check_segment("C5\015");
+    stop_train(); // victory
+    flip_switch("M4G\015");
+  }
+  else
+  {
+    start_train();
+
+    check_segment("C10\015");
+    flip_switch("M4R\015");
+    flip_switch("M3R\015");
+    check_segment("C5\015");
+    stop_train(); // vic
+  }
+
+}
+
+void run_config(int window_id)
+{
+  switch (config) {
+    case 1:
+      solve_config_one(window_id);
+      break;
+    case 2:
+      solve_config_two(window_id);
+      break;
+    case 3:
+      solve_config_three(window_id);
+      break;
+    case 4:
+      solve_config_four(window_id);
+      break;
+    default:
+      wm_print(window_id, "Invalid configuration");
+      break;
+
+  }
+}
+
 void train_process(PROCESS self, PARAM param)
 {
   int window_id = wm_create(6, 4, 20, 20);
-  wm_print(window_id, "Setting up outer switches to keep Zambonie in the outer loop\n");
+  wm_print(window_id, "Setting up outer switches to keep Zamboni in the outer loop\n");
   init_track_switches();
-  wm_print(window_id, "Checking for Zambonie\n");
+  wm_print(window_id, "Checking for Zamboni\n");
   check_zambonie(window_id);
 
   if(zambonie)
@@ -299,17 +376,7 @@ void train_process(PROCESS self, PARAM param)
 
   wm_print(window_id, "Finding config\n");
   find_config(window_id);
-
-  if(config == 0)
-  {
-    wm_print(window_id, "Invalid Config\n");
-  }
-  else
-    wm_print(window_id, "Config %d found", config);
-
-  //solve_config_one(window_id);
-  //solve_config_two(window_id);
-  solve_config_three(window_id);
+  run_config(window_id);
 }
 
 void init_train()
