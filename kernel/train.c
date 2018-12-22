@@ -72,6 +72,12 @@ void stop_train(int window_id)
   send_com_message(0,"L20S0\015");
 }
 
+void stop_train_no_sleep(int window_id)
+{
+  wm_print(window_id, "Stop the train\n");
+  send_com_message(0,"L20S0\015");
+}
+
 void reverse_direction()
 {
   send_com_message(0,"L20D\015");
@@ -92,7 +98,7 @@ void flip_switch(char * switch_cmd)
 
 void check_segment(int window_id, char * sgmnt_cmd)
 {
-  wm_print(window_id, "Checking segment %c%c till there's something on it\n", sgmnt_cmd[1], sgmnt_cmd[2]);
+  wm_print(window_id, "Checking segment %c%c till we detect a vehicle\n", sgmnt_cmd[1], sgmnt_cmd[2]);
   while(probe_segment(sgmnt_cmd) == '0');
   //{
   //  sleep(num_of_ticks);
@@ -170,7 +176,7 @@ void solve_config_one(int window_id)
     flip_switch("M8R\015");
 
     check_segment(window_id, "C12\015"); // train is attached to wagon, switch and stop
-    stop_train(window_id);
+    stop_train_no_sleep(window_id);
     flip_switch("M8G\015");
 
     flip_switch("M7G\015"); // get ready for reverse train run
@@ -248,7 +254,7 @@ void solve_config_two(int window_id)
     start_train(window_id);
 
     check_segment(window_id, "C12\015"); // train is back to start point, flip switch
-    stop_train(window_id); // victory
+    stop_train_no_sleep(window_id);
     flip_switch("M5G\015");
     wm_print(window_id, "Success\n");
   }
@@ -420,7 +426,7 @@ void run_config(int window_id)
 
 void train_process(PROCESS self, PARAM param)
 {
-  int window_id = wm_create(6, 4, 40, 20);
+  int window_id = wm_create(6, 4, 50, 20);
   wm_print(window_id, "Setting up outer switches to keep Zamboni in the outer loop\n");
   init_track_switches();
   wm_print(window_id, "Checking for Zamboni by probing segment 10\n");
