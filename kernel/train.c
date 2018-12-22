@@ -7,7 +7,8 @@ This program solves the model train track challenge
 char res_buf[3];
 int zambonie = 0;
 int config = 0;
-int num_of_ticks = 3;
+int num_of_ticks = 2;
+int sleep_ticks = 2;
 #include <kernel.h>
 
 void send_com_message(int input_buf_len, char * cmd)
@@ -62,6 +63,8 @@ void slow_train()
 
 void stop_train()
 {
+  sleep(sleep_ticks);
+  send_com_message(0,"L20S3\015");
   send_com_message(0,"L20S0\015");
 }
 
@@ -153,10 +156,11 @@ void solve_config_one(int window_id)
 
   if(zambonie == 1)
   {
-    check_segment("C07\015"); // zambonie passes, time to start the train
+    check_segment("C04\015"); // zambonie passes, time to start the train
     start_train();
 
-    check_segment("C10\015"); // zambonie passes above wagon entry, flip switch
+    check_segment("C14\015"); // zambonie passes above wagon entry, flip switch
+    check_segment("C07\015"); // zambonie passes above wagon entry, flip switch
     flip_switch("M8R\015");
 
     check_segment("C12\015"); // train is attached to wagon, switch and stop
@@ -168,16 +172,17 @@ void solve_config_one(int window_id)
 
 
     check_segment("C07\015"); // zamboni on 7
-    check_segment("C06\015"); // zamboni is off 7, time to start train again
+    check_segment("C04\015"); // zamboni is off 7, time to start train again
     reverse_train();
+    flip_switch("M8R\015");
 
-    check_segment("C07\015"); // train is ready for reversal, flip switches and reverse
+
+    check_segment("C06\015"); // train is ready for reversal, flip switches and reverse
     flip_switch("M5R\015");
     flip_switch("M6R\015");
     reverse_train();
 
     check_segment("C08\015"); // train is back to start point, flip switch
-    flip_switch("M5G\015");
     stop_train(); // victory
   }
   else
@@ -318,11 +323,14 @@ void solve_config_four(int window_id)
 
     check_segment("C10\015");
     check_segment("C03\015");
+    slow_train();
     flip_switch("M4R\015");
     flip_switch("M3R\015");
+    flip_switch("M8R\015");
 
-    slow_train();
+
     check_segment("C5\015");
+    sleep(sleep_ticks);
     stop_train(); // victory
     flip_switch("M4G\015");
   }
@@ -377,6 +385,7 @@ void train_process(PROCESS self, PARAM param)
   wm_print(window_id, "Finding config\n");
   find_config(window_id);
   run_config(window_id);
+  become_zombie();
 }
 
 void init_train()
