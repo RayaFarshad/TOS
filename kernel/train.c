@@ -63,8 +63,8 @@ void slow_train()
 
 void stop_train()
 {
-  sleep(sleep_ticks);
-  send_com_message(0,"L20S3\015");
+  //sleep(sleep_ticks);
+  send_com_message(0,"L20S2\015");
   send_com_message(0,"L20S0\015");
 }
 
@@ -87,10 +87,10 @@ void flip_switch(char * switch_cmd)
 
 void check_segment(char * sgmnt_cmd)
 {
-  while(probe_segment(sgmnt_cmd) == '0')
-  {
-    sleep(num_of_ticks);
-  }
+  while(probe_segment(sgmnt_cmd) == '0');
+  //{
+  //  sleep(num_of_ticks);
+  //}
 }
 
 void check_zambonie(int window_id)
@@ -181,6 +181,7 @@ void solve_config_one(int window_id)
     flip_switch("M5R\015");
     flip_switch("M6R\015");
     reverse_train();
+    slow_train();
 
     check_segment("C08\015"); // train is back to start point, flip switch
     stop_train(); // victory
@@ -236,7 +237,9 @@ void solve_config_two(int window_id)
     flip_switch("M5R\015");
     start_train();
 
+    check_segment("C07\015");
     check_segment("C12\015"); // train is back to start point, flip switch
+    slow_train();
     flip_switch("M5G\015");
     stop_train(); // victory
   }
@@ -285,6 +288,8 @@ void solve_config_three(int window_id)
     flip_switch("M1R\015");
     start_train();
 
+    check_segment("C1\015");
+    slow_train();
     check_segment("C2\015");
     flip_switch("M1G\015");
     stop_train(); // victory
@@ -328,9 +333,7 @@ void solve_config_four(int window_id)
     flip_switch("M3R\015");
     flip_switch("M8R\015");
 
-
     check_segment("C5\015");
-    sleep(sleep_ticks);
     stop_train(); // victory
     flip_switch("M4G\015");
   }
@@ -371,7 +374,7 @@ void run_config(int window_id)
 
 void train_process(PROCESS self, PARAM param)
 {
-  int window_id = wm_create(6, 4, 20, 20);
+  int window_id = wm_create(6, 4, 30, 20);
   wm_print(window_id, "Setting up outer switches to keep Zamboni in the outer loop\n");
   init_track_switches();
   wm_print(window_id, "Checking for Zamboni\n");
