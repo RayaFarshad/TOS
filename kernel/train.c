@@ -16,19 +16,19 @@ void print_cursor(int window_id) // to keep the window active
   wm_print(window_id, "%c", 220);
 }
 
-// Sends a message to the com_port. If input_buf_len = 0, we don't wait for any response
+// Sends a message to the com_port. If input_buf_len = 0, we don't expect any characters in response
 void send_com_message(int input_buf_len, char * cmd)
 {
   COM_Message msg;
 
-	msg.output_buffer 		= cmd;
+  msg.output_buffer = cmd;
 
   if(input_buf_len > 0)
-    msg.input_buffer 		= res_buf; // store result in the buffer
+    msg.input_buffer = res_buf; // store result in the buffer
   else
     msg.input_buffer = NULL;
 
-	msg.len_input_buffer 	= input_buf_len;
+	msg.len_input_buffer = input_buf_len;
 
   sleep(sleep_ticks); // sleep between each command
   send(com_port, &msg);
