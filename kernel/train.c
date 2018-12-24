@@ -12,7 +12,7 @@ int num_of_ticks = 2;
 int sleep_ticks = 5;
 char * success_msg = "Successfully retrieved the wagon.\0";
 
-void print_cursor(int window_id)
+void print_cursor(int window_id) // to keep the window active
 {
   wm_print(window_id, "%c", 220);
 }
@@ -33,25 +33,6 @@ void send_com_message(int input_buf_len, char * cmd)
 
   sleep(sleep_ticks); // sleep between each command
   send(com_port, &msg);
-}
-
-// To keep Zamboni in the outer loop
-void init_track_switches(int window_id)
-{
-  int num_init_switches = 5;
-
-  char * switches[5] = {
-    "M1G\015",
-    "M4G\015",
-    "M5G\015",
-    "M8G\015",
-    "M9R\015"
-  };
-
-  for(int i = 0; i < num_init_switches; i++)
-  {
-    flip_switch(window_id, switches[i]);
-  }
 }
 
 // Probe a segment to check if there is any vehicle on it
@@ -80,7 +61,7 @@ void stop_train(int window_id)
   send_com_message(0,"L20S0\015");
 }
 
-void reverse_direction(int window_id)
+void change_direction(int window_id)
 {
   wm_print(window_id, "Reverse the direction\n");
   send_com_message(0,"L20D\015");
@@ -89,7 +70,7 @@ void reverse_direction(int window_id)
 void reverse_train(int window_id)
 {
   stop_train(window_id);
-  reverse_direction(window_id);
+  change_direction(window_id);
   start_train(window_id);
 }
 
@@ -116,6 +97,26 @@ void check_segment(int window_id, char * sgmnt_cmd)
   }
 }
 
+// To keep Zamboni in the outer loop
+void init_track_switches(int window_id)
+{
+  int num_init_switches = 5;
+
+  char * switches[5] = {
+    "M1G\015",
+    "M4G\015",
+    "M5G\015",
+    "M8G\015",
+    "M9R\015"
+  };
+
+  for(int i = 0; i < num_init_switches; i++)
+  {
+    flip_switch(window_id, switches[i]);
+  }
+}
+
+// probe segment 10 as it's in the mid-point of the 2 starting positions of Zamboni
 void check_zamboni(int window_id)
 {
   int i = 0;
@@ -136,6 +137,7 @@ void check_zamboni(int window_id)
   }
 }
 
+// Probe the train and wagon to determine the configuration
 void find_config(int window_id)
 {
   // probe initial starting points for train
@@ -214,13 +216,12 @@ void solve_config_one(int window_id)
     start_train(window_id);
     flip_switch(window_id, "M8R\015");
 
-    check_segment(window_id, "C12\015"); // train is attached to wagon, stop, switch, and reverse
-    stop_train(window_id);
+    check_segment(window_id, "C12\015");
     flip_switch(window_id, "M7G\015");
     flip_switch(window_id, "M6G\015");
     reverse_train(window_id);
 
-    check_segment(window_id, "C06\015"); // time to reverse train
+    check_segment(window_id, "C06\015");
     flip_switch(window_id, "M5R\015");
     flip_switch(window_id, "M6R\015");
     reverse_train(window_id);
@@ -228,7 +229,7 @@ void solve_config_one(int window_id)
     check_segment(window_id, "C07\015");
     slow_train(window_id);
 
-    check_segment(window_id, "C08\015"); // train is back to start point, stop
+    check_segment(window_id, "C08\015");
     stop_train(window_id); // victory
     wm_print(window_id, "%s\n", success_msg);
   }
@@ -246,33 +247,34 @@ void solve_config_two(int window_id)
 
   if(zamboni == 1)
   {
-    check_segment(window_id, "C03\015"); // zamboni passes, time to start the train
+    check_segment(window_id, "C03\015");
     sleep(sleep_ticks);
     flip_switch(window_id, "M1R\015");
     start_train(window_id);
 
-    check_segment(window_id, "C14\015"); // reverse train, flip switch
+    check_segment(window_id, "C14\015");
     flip_switch(window_id, "M2G\015");
     sleep(sleep_ticks);
     reverse_train(window_id);
 
     check_segment(window_id, "C01\015");
     flip_switch(window_id, "M1G\015");
+    slow_train(window_id);
 
-    check_segment(window_id, "C02\015"); // train is attached to wagon, stop
+    check_segment(window_id, "C02\015");
     stop_train(window_id);
+
+    check_segment(window_id, "C07\015");
+    start_train(window_id);
 
     check_segment(window_id, "C10\015");
     flip_switch(window_id, "M5R\015");
-    start_train(window_id);
-
-    check_segment(window_id, "C07\015");
     slow_train(window_id);
 
     check_segment(window_id, "C09\015");
     flip_switch(window_id, "M5G\015");
 
-    check_segment(window_id, "C12\015"); // train is back to start point, flip switch
+    check_segment(window_id, "C12\015");
     stop_train(window_id);
     wm_print(window_id, "%s\n", success_msg);
   }
@@ -282,12 +284,15 @@ void solve_config_two(int window_id)
     flip_switch(window_id, "M1R\015");
     start_train(window_id);
 
-    check_segment(window_id, "C14\015"); // reverse train, flip switch
+    check_segment(window_id, "C14\015");
     flip_switch(window_id, "M2G\015");
     reverse_train(window_id);
 
-    check_segment(window_id, "C12\015"); // train is back to start point, flip switch
-    stop_train(window_id); // victory
+    check_segment(window_id, "C07\015");
+    slow_train(window_id);
+
+    check_segment(window_id, "C12\015");
+    stop_train(window_id);
     wm_print(window_id, "%s\n", success_msg);
   }
 
@@ -297,14 +302,13 @@ void solve_config_three(int window_id)
 {
   wm_print(window_id, "Solving for config 3\n");
 
-  flip_switch(window_id, "M7R\015");
   flip_switch(window_id, "M3G\015");
   flip_switch(window_id, "M4R\015");
+  flip_switch(window_id, "M7R\015");
 
   if(zamboni == 1)
   {
-    check_segment(window_id, "C03\015");
-    check_segment(window_id, "C10\015"); // zamboni passes, time to start the train
+    check_segment(window_id, "C10\015");
     start_train(window_id);
 
     check_segment(window_id, "C03\015");
@@ -313,7 +317,6 @@ void solve_config_three(int window_id)
 
     check_segment(window_id, "C12\015");
     flip_switch(window_id, "M1G\015");
-
     stop_train(window_id);
     flip_switch(window_id, "M2G\015");
 
@@ -324,8 +327,9 @@ void solve_config_three(int window_id)
 
     check_segment(window_id, "C01\015");
     slow_train(window_id);
-    check_segment(window_id, "C02\015");
     flip_switch(window_id, "M1G\015");
+
+    check_segment(window_id, "C02\015");
     stop_train(window_id); // victory
     wm_print(window_id, "%s\n", success_msg);
   }
@@ -338,8 +342,6 @@ void solve_config_three(int window_id)
 
     check_segment(window_id, "C12\015");
     flip_switch(window_id, "M2G\015");
-    flip_switch(window_id, "M8R\015");
-    flip_switch(window_id, "M1R\015");
 
     check_segment(window_id, "C01\015");
     slow_train(window_id);
@@ -361,11 +363,12 @@ void solve_config_four(int window_id)
 
   if(zamboni == 1)
   {
+    check_segment(window_id, "C06\015");
     check_segment(window_id, "C04\015");
     start_train(window_id);
 
     check_segment(window_id, "C10\015");
-    check_segment(window_id, "C03\015");
+    check_segment(window_id, "C04\015");
     flip_switch(window_id, "M4R\015");
     flip_switch(window_id, "M3R\015");
     flip_switch(window_id, "M8R\015"); // trap zamboni in inner loop
@@ -374,17 +377,20 @@ void solve_config_four(int window_id)
     slow_train(window_id);
 
     check_segment(window_id, "C05\015");
-    stop_train(window_id); // victory
+    stop_train(window_id);
     wm_print(window_id, "%s\n", success_msg);
   }
   else
   {
     start_train(window_id);
+
     check_segment(window_id, "C10\015");
     flip_switch(window_id, "M4R\015");
     flip_switch(window_id, "M3R\015");
+
     check_segment(window_id, "C06\015");
     slow_train(window_id);
+
     check_segment(window_id, "C05\015");
     stop_train(window_id);
     wm_print(window_id, "%s\n", success_msg);
