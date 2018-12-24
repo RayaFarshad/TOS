@@ -8,7 +8,6 @@ This file solves the model train challenge
 char res_buf[3]; //a buffer to store the response from send_com_msg
 int zamboni = 0;
 int config = 0;
-int num_of_ticks = 2;
 int sleep_ticks = 5;
 char * success_msg = "Successfully retrieved the wagon.\0";
 
@@ -63,7 +62,7 @@ void stop_train(int window_id)
 
 void change_direction(int window_id)
 {
-  wm_print(window_id, "Reverse the direction\n");
+  wm_print(window_id, "Change the direction\n");
   send_com_message(0,"L20D\015");
 }
 
@@ -248,13 +247,11 @@ void solve_config_two(int window_id)
   if(zamboni == 1)
   {
     check_segment(window_id, "C03\015");
-    sleep(sleep_ticks);
     flip_switch(window_id, "M1R\015");
     start_train(window_id);
 
     check_segment(window_id, "C14\015");
     flip_switch(window_id, "M2G\015");
-    sleep(sleep_ticks);
     reverse_train(window_id);
 
     check_segment(window_id, "C01\015");
